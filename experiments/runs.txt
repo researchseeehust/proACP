@@ -1,0 +1,14 @@
+# The runs behind the reported numbers, in order. One RTX PRO 5000 Blackwell, 4096 environments, seed 0.
+# Format: <run> <command> <flags>    (scripts/train.sh <command> <run> <flags>; scripts/reproduce_main.sh runs them all)
+# The per-run logs and checkpoints are not part of this repository.
+#
+# --- Stage 1: the contact tracker on reference targets
+acp_stage1       stage1 --iterations 30000                                                                        # 4.6 h, published clips
+acp_stage1_ft    stage1 --init logs/acp_stage1/last.pt --motion_dir data/php_parkour_refined --target_min_steps 4 --iterations 4000   # 0.7 h, refined clips; the reported checkpoint is ckpt_004000
+# --- Stage 2, offline: the planner on hindsight labels of the frozen tracker
+acp_planner_ft   planner_offline --tracker logs/acp_stage1_ft/ckpt_004000.pt                                       # 0.7 h, 20,000 steps; planner_020000.pt
+# --- Stage 2: tracker + planner co-training
+acp_stage2       stage2 --init logs/acp_stage1_ft/ckpt_004000.pt --planner_init logs/acp_planner_ft/planner_020000.pt --iterations 24000
+acp_stage2_tw    stage2 --resume logs/acp_stage2/last.pt --term_window 2 --eta_rew_max 0.58 --iterations 40000      # 14.7 h in total for the two Stage 2 runs; ckpt_040000 is reported
+# --- Stage 3: not run yet
+# acp_stage3     stage3 --init logs/acp_stage2_tw/last.pt
